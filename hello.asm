@@ -3,8 +3,8 @@ SECTION .DATA
 	hello_Len:  equ $-hello ; $ is address of 'here' - address of starting string 'hello'
 
 
-SECTION .TEXT
-	GLOBAL _start
+SECTION .text
+	global _start
 
 _start:
 	mov eax, 4             ; 4 is the 'write' system call
