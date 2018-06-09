@@ -61,12 +61,13 @@ SECTION .Text           ; Section containing code
     ; Look up a low nybble character and insert it into a the string
         and al, 0fh                     ; Mask out all but the low nybble
         mov al, byte[Digits + eax]      ; Look up char equivalent of nybble
-        mov byte [HexStr + edx + 2], al ; Write LSB char digit to line string
+        mov byte [HexStr + edx + 1], al ; Write LSB char digit to line string
+        
 
     ; Look up high nybble character and insert it into the string
         shr bl, 4       ; Shift high 4 bits of char into low 4 bits
         mov bl, byte[Digits + ebx]  ; Look up the char equivalent of nybble
-        mov byte [HexStr + edx + 1], bl ; Write MSB char digit to line string
+        mov byte [HexStr + edx], bl ; Write MSB char digit to line string
 
     ; Bump the buffer pointer to the next character and see if we're done
         inc ecx ; Increment line string pointer
