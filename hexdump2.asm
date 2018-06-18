@@ -19,18 +19,18 @@ SECTION .data   ; Section containing initialized data
     ; hex seperated by spaces.  Immediately following is a 16 character line
     ; delimited by vertical bar characters.  Because they are adajacent, the two
     ; parts can be referenced separately or as a single contiguous unit.  
-    ; Remember that if dumplin is used seperately, you must append an 
+    ; Remember that if DumpLin is used seperately, you must append an 
     ; ROL before sending it to the linux console.  
 
-    Dumplin: db " 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
-    Dumplen EQU $-dumplin
+    DumpLin: db " 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
+    DUMPLEN EQU $-DumpLin
     ASCLin: db "|.................|", 10
     ASCLEN EQU $-ASCLin
-    FULLEN EQU $-Dumplin
+    FULLEN EQU $-DumpLin
 
     ; The HexDigits table is used to convert numeric values to their hex
     ; equivalents. Index by nybble without a scale: [HexDigits + eax]
-    HexDigits: "0123456789ABCDEF"
+    HexDigits: db "0123456789ABCDEF"
 
     ; This table is used for ascii character translation, into the ascii
     ; portion of the hex dump line, via xlat or ordinary memory lookup.
@@ -70,10 +70,10 @@ SECTION .data   ; Section containing initialized data
 
     ClearLine:
 
-            Pushad          ; Save all the caller's GP registers
+            pushad          ; Save all the caller's GP registers
             mov edx, 16     ; We're goind to do 16 pokes, coutning from 0
     .poke:  mov eax, 0      ; Tell Dumpchar to poke a '0'
-            call Dumpchar   ; Insert the '0' into the hex dump string
+            call DumpChar   ; Insert the '0' into the hex dump string
             sub edx, 1      ; DEC doesnt effect CF
             jae .poke       ; Loop back if EDX >= 0
             popad           ; Restore all the callers GP Register
@@ -107,14 +107,111 @@ SECTION .data   ; Section containing initialized data
     ; Look up low nybble character and insert it into the string 
             and eax, 0000000fh  ; Mask out al but the low nybble
             mov al, byte [HexDigits + eax]    ; Look up the char equivalent of nybble
-            mov byte [Dumplin + edi + 2], al  ; Write the character equivalent to line string
+            mov byte [DumpLin + edi + 2], al  ; Write the character equivalent to line string
     
     ; Look up high nybble character and insert it into the string
             and ebx, 000000f0h  ; Mask out all but the second lowest nybble
             shr ebx, 4          ; Shift high 4 bits of byte into low 4 bits 
             mov bl, byte [HexDigits + ebx] ; Look up char equiv of nybble
-            mov byte [DumpLin + edi + 1] ; Write the char equiv to line string
+            mov byte [DumpLin + edi + 1], bl ; Write the char equiv to line string
 
             pop edi ; restore callers edi
             pop ebx ; restore callers ebx
             ret     ; return to caller  
+
+    ;--------------------------------------
+    ; PrintLine: Displays DumpLin to stdout
+    ; IN: Nothing
+    ; Returns: Nothing
+    ; Modifies: Nothing
+    ; Calls: Kernel sys_write
+    ; Description: The hex dump line string DumpLin is displayed to stdout
+    ;              using int 80h sys_write. All GP registers are preserved
+
+    PrintLine:
+
+            pushad      ; Save al callers registers
+            mov eax, 4  ; Specify sys_write call
+            mov ebx, 1  ; Specify file descriptor 1: Standard output
+            mov ecx, DumpLin ; Pass offset of line string
+            mov edx, FULLEN    ; PAss size of line string
+            int 80h     ; Make Kernel call
+            popad       ; Restor callers registers
+            ret
+
+    ;--------------------------------------
+    ; LoadBuff: Fills a buffer with data from stdin via int 80h sys_read
+    ; IN: Nothing
+    ; Returns: # of bytes read in EBP
+    ; Modifies: ECX, EBP, Buff
+    ; Calls: Kernel sys_write
+    ; Description: Loads a buffer full of data (BUFFLEN bytes) from stdin
+    ;              using int 80h sys_read and places it in Buff. Buffer 
+    ;              offset counter ECX zeroed, because were starting in a new
+    ;              buffer full of data. Caller must test value in EBP: If EBP
+    ;              contains zero on return, we hit EOF on stdin.  LEss than 0 in
+    ;              on return indicates some kind of error
+
+    LoadBuff:
+            push eax            ; Save callers eax
+            push ebx            ; Save callers ebx
+            push edx            ; Save callers edx
+            mov eax, 3          ; Specify sys_read call
+            mov ebx, 0          ; Specify file descriptor 0: Standard input
+            mov ecx, Buff       ; Pass offset of the buffer to read to
+            mov edx, BUFFLEN    ; Pass number of bytes to read at one pass
+            int 80h             ; Make system call
+            mov ebp, eax        ; Save # of bytes read from file for later
+            xor ecx, ecx        ; Clear buffer pointer ECX to 0
+            pop edx             ; Restore callers edx
+            pop ebx             ; Restore callers ebx
+            pop eax             ; Restore callers eax
+            ret
+
+    global _start
+
+    ; MAIN PROGRAM ;
+
+    _start:
+
+        nop ; nop for GDB
+        nop
+
+    ; Whatever initialization needs doing before the loop scan starts is here
+        xor esi, esi    ; Clear total byte count to 0
+        call LoadBuff   ; Read first buffer of data from stdin
+        cmp ebp, 0      ; if ebp=0, sys_read reached EOF on stdin
+        jbe Exit        
+
+    ; Go through the buffer and convert binary byte value to hex digits 
+    Scan:
+        xor eax, eax ; Clear EAX to 0
+        mov al, byte [Buff + ecx] ; Get a byte from the buffer to AL
+        mov edx, esi ; Copy a total counter into EDX
+        and edx, 0000000fh ; Mask out lowest 4 bits of char counter
+        call DumpChar ; Call the char poke procedure
+
+    ; Bump the buffer pointer to the next character and see if buffers done
+        inc esi ; increment total chars processed counter
+        inc ecx ; increment buffer pointer
+        cmp ecx, ebp ; Compare with # chars in Buffer
+        jb .modTest ; if weve processed all chars in buffer
+        call LoadBuff ; go fill the buffer again 
+        cmp ebp, 0  ; if ebp=0, sys_Read reached EOF on stdin
+        jbe Done    ; if we got EOF, were done
+
+    ; See if were at the end of a block of 16 and need to display a line
+    .modTest:
+        test esi, 0000000fh ; Test 4 lowest bits in counter for 0, (Test does not set AF flag)
+        jnz Scan            ; If counter is not modulo 16, loop back
+        call PrintLine      ; otherwise print the line
+        call ClearLine      ; clear hex dump line to 0
+        jmp Scan            ; Contiue scanning the buffer
+
+    Done:
+        call PrintLine      ; Print the Leftovers line
+    
+    Exit:                   
+        mov eax, 1          ; Code for exit sys_call
+        mov ebx, 0          ; Return a code of 0
+        int 80h             ; MAke kernel call
