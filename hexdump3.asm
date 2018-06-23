@@ -17,6 +17,8 @@ SECTION .text
 EXTERN ClearLine, DumpChar, PrintLine
 
 GLOBAL _start
+
+_start:
     nop         ; Keeps GDB happy
     nop
     xor esi, esi    ; Clear total chars counter to 0

@@ -12,8 +12,10 @@ SECTION .bss    ; Section containing uninitialized data
     Buff resb BUFFLEN
 
 SECTION .data   ; Section containing initialized data
+
 GLOBAL ClearLine, DumpChar, NewLines, PrintLine ; Procedures
 GLOBAL Dumplin, HexDigits, BinDigits            ; Data Items
+
 ; Here we have two parts of a single useful data structure, implementing the
 ; text line of hex dump utility. The first part displays 16 bytes in hex
 ; separated by spaces.  Immediately following is a 16-character line delimited
@@ -78,14 +80,14 @@ SECTION .text   ; Section containing code
 ; DESCRIPTION:	The hex dump line string is cleared to binary 0
 
 ClearLine:
-    push edx    ; Save callers edx
+    pushfq    ; Save callers edx
     mov edx, 15 ; We're going to go 16 pokes, counting from 0
 .Poke: 
     mov eax, 0  ; Tell dumpchar to poke a zero
     call DumpChar ; insert the '0' into the hex dump string
     sub edx, 1  ; DEC doesn't affect CF
     jae .Poke   ; Loop back if EDX >= 0
-    pop edx     ; Restore callers EDX
+    popfq     ; Restore callers EDX
     ret         ; return
 
 ;-------------------------------------------------------------------------
@@ -102,8 +104,7 @@ ClearLine:
 
   DumpChar:
 
-            push ebx    ; Save callers ebx
-            push edi    ; Save callers edi
+            pushfq
 
     ; First we insert the input char into the ASCII portion of the dump line
             mov bl, byte [DotXlat + eax]    ; Translate non printables to '.'
@@ -124,8 +125,7 @@ ClearLine:
             mov bl, byte [HexDigits + ebx] ; Look up char equiv of nybble
             mov byte [DumpLin + edi + 1], bl ; Write the char equiv to line string
 
-            pop edi ; restore callers edi
-            pop ebx ; restore callers ebx
+            popfq
             ret     ; return to caller  
 
 ;-------------------------------------------------------------------------
@@ -142,7 +142,7 @@ ClearLine:
 ;		.bss sections.
 
 Newlines:
-    pushad        ; save all callers registers
+    pushfq        ; save all callers registers
     cmp edx, 15   ; Make sure caller didnt ask for more than 15
     ja .exit      ; If so, exit without doing anything
     mov ecx, EOLs ; put address of EOLs table into ECX
@@ -150,7 +150,7 @@ Newlines:
     mov ebx, 1    ; specify stdout
     int 80h       ; make kernel call
 .exit:             
-    popad         ; Restore all callers registers
+    popfq         ; Restore all callers registers
     ret           ; return
 EOLs	db 10,10,10,10,10,10,10,10,10,10,10,10,10,10,10
 
@@ -168,12 +168,12 @@ EOLs	db 10,10,10,10,10,10,10,10,10,10,10,10,10,10,10
 
 PrintLine:
 
-    pushad      ; Save al callers registers
+    pushfq      ; Save al callers registers
     mov eax, 4  ; Specify sys_write call
     mov ebx, 1  ; Specify file descriptor 1: Standard output
     mov ecx, DumpLin ; Pass offset of line string
     mov edx, FULLLEN    ; PAss size of line string
     int 80h     ; Make Kernel call
-    popad       ; Restor callers registers
+    popfq       ; Restor callers registers
     ret
 
