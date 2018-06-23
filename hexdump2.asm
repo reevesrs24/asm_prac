@@ -176,7 +176,7 @@ SECTION .data   ; Section containing initialized data
 
         nop ; nop for GDB
         nop
-
+;
     ; Whatever initialization needs doing before the loop scan starts is here
         xor esi, esi    ; Clear total byte count to 0
         call LoadBuff   ; Read first buffer of data from stdin
@@ -201,7 +201,7 @@ SECTION .data   ; Section containing initialized data
         jbe Done    ; if we got EOF, were done
 
     ; See if were at the end of a block of 16 and need to display a line
-    .modTest:
+    .modTest
         test esi, 0000000fh ; Test 4 lowest bits in counter for 0, (Test does not set AF flag)
         jnz Scan            ; If counter is not modulo 16, loop back
         call PrintLine      ; otherwise print the line
