@@ -17,7 +17,7 @@ PosTerm: db 27, "[01;01h"   ; <ESC>[<Y>;<X>H
 POSLEN: equ $-PosTerm       ; Length of term position string
 ClearTerm: db 27, "[2j"     ; <ESC>[2j; clears display
 CLEARLEN: equ $-ClearTerm   ; Length of term clear string
-Admsg: db "Eat at Joe's"    ; Ad message
+Admsg: db "Eat at Joe's",10    ; Ad message
 ADLEN: equ $-Admsg          ; Length of ad message
 Prompt: db "Press Enter: "  ; User Prompt
 PROMPTLEN: equ $-Prompt     ; Length of user prompt

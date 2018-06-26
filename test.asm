@@ -1,9 +1,9 @@
 SECTION .data
- 
-    EatMsg: db "Eat at Joes", 10
-    EatLen: equ $-EatMsg
+    Test: db 8
+   
 
 SECTION .bss
+     c: resb 1
 
 SECTION .text
 
@@ -12,8 +12,7 @@ global _start
 
 _start:
     nop
-    mov eax, 4 ; Specify system write syscall
-    mov ebx, 1 ; Specify File Descriptor 1: Standard Output
+    
     call print
     
 
@@ -24,10 +23,19 @@ _start:
 	int 80h              ; call an interrupt
 
  print:
-    push 2
-    mov ecx, EatMsg
-    mov edx, EatLen
-    int 80h
+    mov eax, [Test]
+    add eax, '0'  ; get digit's ascii code
+    mov [c], eax  ; store it at c
+    dec eax
+    mov eax, 4 ; sys_write
+    mov ebx, 1    ; stdout
+    mov ecx, c    ; pass the address of c to ecx
+    mov edx, 1    ; one character
+    int 0x80      ; syscall
+    dec BYTE ptr [Test]
+    cmp  BYTE ptr [Test], 0
+    jmp print
+    ret
 
 
 
