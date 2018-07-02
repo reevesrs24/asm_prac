@@ -6,8 +6,11 @@ SECTION .data
     BUZZLEN: equ $-Buzz
     FizzBuzz: db "FizzBuzz",10
     FIZZBUZZLEN: equ $-FizzBuzz
-    Count: equ 101
-
+    Count: equ 111
+    Nums: db "0123456789"
+    NL: db 10
+    Space: db 32
+    
 SECTION .bss
     
 
@@ -48,6 +51,59 @@ Exit:
 	mov rbx, 0            ; exit with error code 0
 	int 80h               ; call an interrupt
 
+Print_Num_Stack:
+    xor rdx, rdx
+    xor rcx, rcx
+    pop rdx
+    mov rax, 4
+    mov rbx, 1
+    lea rcx, [Nums + rdx]
+    mov rdx, 1
+    int 80h
+    dec rsi
+    cmp rsi, 0
+    jne Print_Num_Stack
+    jmp End
+
+Print_Num:
+    mov rdi, rcx
+    push rcx
+    mov rax, rcx ; Move remaining count into dividend
+.Loop:
+    xor rcx, rcx
+    xor rdx, rdx
+    mov rcx, 10  ; Move 10 into the divisor
+    div rcx      ; divide rdx = remainder
+    push rdx
+    inc rsi
+    cmp rax, 0
+    jne .Loop
+    jmp Print_Num_Stack
+End:    
+    pop rcx
+    ret
+
+
+
+Print_New_Line:
+    push rcx
+    mov rax, 4
+    mov rbx, 1
+    mov rcx, NL
+    mov dl, 1
+    int 80h
+    pop rcx
+    ret
+
+Print_Space:
+    push rcx
+    mov rax, 4
+    mov rbx, 1
+    mov rcx, Space
+    mov dl, 1
+    int 80h
+    pop rcx
+    ret
 
 global _start
 
@@ -56,9 +112,12 @@ _start:
     nop
     mov rcx, Count
 Loop:
-    dec rcx
     cmp rcx, 1
-    jz Exit
+    je Exit
+    dec rcx
+    call Print_Num
+    call Print_Space
+    
 
     xor rdx, rdx
     mov rax, rcx
@@ -80,6 +139,8 @@ Loop:
     div rbx
     cmp rdx, 0
     jz Print_Div_5
+
+    call Print_New_Line
 
     jmp Loop
 
