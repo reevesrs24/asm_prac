@@ -112,7 +112,7 @@ _start:
     nop
     mov rcx, Count
 Loop:
-    cmp rcx, 1
+    cmp rcx, 0
     je Exit
     dec rcx
     call Print_Num

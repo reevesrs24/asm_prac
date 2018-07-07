@@ -1,8 +1,8 @@
-fizzBuzz: fizz_buzz.o
-	ld -o fizzBuzz fizz_buzz.o
+movsb: movsb.o
+	ld -o movsb movsb.o
 
-fizz_buzz.o: fizz_buzz.asm
-	     nasm -f elf64 -g -F stabs fizz_buzz.asm
+movsb.o: movsb.asm
+	   nasm -f elf64 -g -F stabs movsb.asm
 
 clean: 
-	rm *.o fizzBuzz
+	rm *.o movsb
